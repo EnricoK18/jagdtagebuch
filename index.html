@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Jagdtagebuch</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+    <link rel="icon" href="img/icon.svg" type="image/svg+xml">
+    <link rel="icon" href="img/favicon-32.png" sizes="32x32" type="image/png">
+    <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <a href="#main-content" class="skip-link">Zum Hauptinhalt springen</a>
+
+    <header class="app-header">
+        <div class="app-header-inner">
+            <a class="app-brand" href="index.html">Jagdtagebuch</a>
+            <nav class="main-nav" aria-label="Hauptnavigation">
+                <a class="nav-link active" href="#jagden" data-page="jagden" aria-current="page"><span data-icon="list" data-size="22"></span>Jagden</a>
+                <a class="nav-link desktop-only" href="#jagden-tabelle" data-page="jagden-tabelle"><span data-icon="table" data-size="22"></span>Tabelle</a>
+                <a class="nav-link" href="seats.html"><span data-icon="map-pin" data-size="22"></span>Sitze</a>
+                <a class="nav-link" href="#tierarten" data-page="tierarten"><span data-icon="tag" data-size="22"></span>Tierarten</a>
+                <a class="nav-link" href="#reviere" data-page="reviere"><span data-icon="map" data-size="22"></span>Reviere</a>
+                <a class="nav-link" href="#auswertungen" data-page="auswertungen"><span data-icon="chart" data-size="22"></span>Auswertungen</a>
+            </nav>
+            <button class="btn btn-primary header-action" onclick="openJagdModal()" aria-label="Neue Jagd erfassen">
+                <span data-icon="plus"></span><span class="label">Neue Jagd</span>
+            </button>
+        </div>
+    </header>
+
+    <main id="main-content">
+        <!-- Jagden -->
+        <section id="page-jagden" class="page active" aria-labelledby="title-jagden">
+            <div class="page-hero">
+                <img src="img/deer-mist.jpg" alt="" style="object-position: center 62%;">
+                <div class="page-hero-inner">
+                    <h2 id="title-jagden">Jagden</h2>
+                    <p id="hunts-count"></p>
+                </div>
+            </div>
+            <div class="page-content">
+                <div class="filters" role="group" aria-label="Filter">
+                    <div class="filter-field">
+                        <label for="filter-revier">Revier</label>
+                        <select id="filter-revier" onchange="loadJagden()">
+                            <option value="">Alle Reviere</option>
+                        </select>
+                    </div>
+                    <div class="filter-field">
+                        <label for="filter-jahr">Jagdjahr</label>
+                        <select id="filter-jahr" onchange="loadJagden()">
+                            <option value="">Alle Jagdjahre</option>
+                        </select>
+                    </div>
+                    <div class="filter-field">
+                        <label for="filter-tierart">Tierart</label>
+                        <select id="filter-tierart" onchange="loadJagden()">
+                            <option value="">Alle Tierarten</option>
+                        </select>
+                    </div>
+                    <div class="filter-field">
+                        <label for="filter-monat">Monat</label>
+                        <input type="month" id="filter-monat" onchange="loadJagden()">
+                    </div>
+                    <button class="btn btn-secondary" id="advanced-filters-toggle" onclick="toggleAdvancedFilters()" aria-expanded="false" aria-controls="advanced-filters">
+                        <span data-icon="sliders"></span><span class="label">Weitere Filter</span>
+                    </button>
+                </div>
+
+                <div id="advanced-filters" class="advanced-filters" style="display: none;">
+                    <div class="filter-grid">
+                        <div class="filter-group">
+                            <label for="filter-hunt-type">Jagdart</label>
+                            <select id="filter-hunt-type">
+                                <option value="">Alle</option>
+                                <option value="Ansitz">Ansitz</option>
+                                <option value="Drückjagd">Drückjagd</option>
+                                <option value="Gruppenansitz">Gruppenansitz</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="filter-wind-direction">Windrichtung</label>
+                            <select id="filter-wind-direction">
+                                <option value="">Alle</option>
+                                <option value="N">Nord</option>
+                                <option value="NO">Nordost</option>
+                                <option value="O">Ost</option>
+                                <option value="SO">Südost</option>
+                                <option value="S">Süd</option>
+                                <option value="SW">Südwest</option>
+                                <option value="W">West</option>
+                                <option value="NW">Nordwest</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="filter-seat">Sitz</label>
+                            <input type="text" id="filter-seat" placeholder="z. B. 12/1">
+                        </div>
+                        <div class="filter-group">
+                            <label for="filter-date-from">Datum von</label>
+                            <input type="date" id="filter-date-from">
+                        </div>
+                        <div class="filter-group">
+                            <label for="filter-date-to">Datum bis</label>
+                            <input type="date" id="filter-date-to">
+                        </div>
+                        <div class="filter-group">
+                            <span class="form-label">Temperatur (°C)</span>
+                            <div class="range-inputs">
+                                <input type="number" id="filter-temp-min" placeholder="Min" step="0.1" aria-label="Temperatur von">
+                                <span>bis</span>
+                                <input type="number" id="filter-temp-max" placeholder="Max" step="0.1" aria-label="Temperatur bis">
+                            </div>
+                        </div>
+                        <div class="filter-group">
+                            <span class="form-label">Niederschlag (mm)</span>
+                            <div class="range-inputs">
+                                <input type="number" id="filter-precip-min" placeholder="Min" step="0.1" aria-label="Niederschlag von">
+                                <span>bis</span>
+                                <input type="number" id="filter-precip-max" placeholder="Max" step="0.1" aria-label="Niederschlag bis">
+                            </div>
+                        </div>
+                        <div class="filter-group">
+                            <label><input type="checkbox" id="filter-has-observed" onchange="loadJagden()"> Mit Anblick</label>
+                        </div>
+                        <div class="filter-group">
+                            <label><input type="checkbox" id="filter-has-harvested" onchange="loadJagden()"> Mit Strecke</label>
+                        </div>
+                    </div>
+                    <div class="filter-actions">
+                        <button class="btn btn-secondary" onclick="resetAdvancedFilters()">Zurücksetzen</button>
+                        <button class="btn btn-primary" onclick="applyAdvancedFilters()">Filter anwenden</button>
+                    </div>
+                </div>
+
+                <div id="active-filters" class="active-filters"></div>
+
+                <div id="jagden-list" class="hunt-groups" aria-live="polite"></div>
+            </div>
+        </section>
+
+        <!-- Jagden-Tabelle -->
+        <section id="page-jagden-tabelle" class="page" aria-labelledby="title-tabelle">
+            <div class="page-content">
+                <div class="page-header">
+                    <h2 id="title-tabelle">Jagden-Tabelle</h2>
+                    <div class="page-header-actions">
+                        <button class="btn btn-secondary" onclick="loadHuntsTable()"><span data-icon="refresh"></span>Aktualisieren</button>
+                    </div>
+                </div>
+                <div class="filters" role="group" aria-label="Filter">
+                    <div class="filter-field">
+                        <label for="filter-revier-table">Revier</label>
+                        <select id="filter-revier-table" onchange="loadHuntsTable()">
+                            <option value="">Alle Reviere</option>
+                        </select>
+                    </div>
+                    <div class="filter-field">
+                        <label for="filter-jahr-table">Jagdjahr</label>
+                        <select id="filter-jahr-table" onchange="loadHuntsTable()">
+                            <option value="">Alle Jagdjahre</option>
+                        </select>
+                    </div>
+                    <div class="filter-field">
+                        <label for="filter-monat-table">Monat</label>
+                        <input type="month" id="filter-monat-table" onchange="loadHuntsTable()">
+                    </div>
+                </div>
+                <div id="jagden-table-container" class="table-container"></div>
+            </div>
+        </section>
+
+        <!-- Tierarten -->
+        <section id="page-tierarten" class="page" aria-labelledby="title-tierarten">
+            <div class="page-content">
+                <div class="page-header">
+                    <h2 id="title-tierarten">Tierarten</h2>
+                    <button class="btn btn-primary" onclick="openTierartModal()"><span data-icon="plus"></span>Neue Tierart</button>
+                </div>
+                <div class="filters" role="group" aria-label="Filter">
+                    <div class="filter-field">
+                        <label for="filter-kategorie">Kategorie</label>
+                        <select id="filter-kategorie" onchange="loadTierarten()">
+                            <option value="">Alle Kategorien</option>
+                            <option value="Wild">Wild</option>
+                            <option value="Raubwild">Raubwild</option>
+                            <option value="Federwild">Federwild</option>
+                            <option value="Schalenwild">Schalenwild</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="tierarten-list" class="cards-container"></div>
+            </div>
+        </section>
+
+        <!-- Reviere -->
+        <section id="page-reviere" class="page" aria-labelledby="title-reviere">
+            <div class="page-hero">
+                <img src="img/forest-edge.jpg" alt="" style="object-position: 30% 45%;">
+                <div class="page-hero-inner">
+                    <h2 id="title-reviere">Reviere</h2>
+                    <button class="btn btn-secondary" onclick="openRevierModal()"><span data-icon="plus"></span>Neues Revier</button>
+                </div>
+            </div>
+            <div class="page-content">
+                <div id="reviere-list" class="cards-container"></div>
+            </div>
+        </section>
+
+        <!-- Auswertungen -->
+        <section id="page-auswertungen" class="page" aria-labelledby="title-auswertungen">
+            <div class="page-hero">
+                <img src="img/autumn-forest.jpg" alt="" style="object-position: center 40%;">
+                <div class="page-hero-inner">
+                    <h2 id="title-auswertungen">Auswertungen</h2>
+                    <p id="report-period"></p>
+                </div>
+            </div>
+            <div class="page-content">
+                <div class="filters" role="group" aria-label="Auswertungsfilter">
+                    <div class="filter-field">
+                        <label for="auswertung-jahr">Jagdjahr</label>
+                        <select id="auswertung-jahr" onchange="loadAuswertung()">
+                            <option value="">Alle Jagdjahre</option>
+                        </select>
+                    </div>
+                    <div class="filter-field">
+                        <label for="auswertung-revier">Revier</label>
+                        <select id="auswertung-revier" onchange="loadAuswertung()">
+                            <option value="">Alle Reviere</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="auswertungen-content" class="report-content" aria-live="polite"></div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Dialog -->
+    <div id="modal-overlay" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title"
+        aria-hidden="true" onclick="closeModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 id="modal-title"></h3>
+                <button class="modal-close" onclick="closeModal()" aria-label="Dialog schließen"><span data-icon="x" data-size="20"></span></button>
+            </div>
+            <div class="modal-body" id="modal-body"></div>
+        </div>
+    </div>
+
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Bestätigung -->
+    <div id="confirm-overlay" class="modal-overlay" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title"
+        aria-describedby="confirm-message" style="display: none;">
+        <div class="modal-content" style="max-width: 440px;" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 id="confirm-title">Bestätigung</h3>
+                <button class="modal-close" onclick="closeConfirmModal(false)" aria-label="Dialog schließen"><span data-icon="x" data-size="20"></span></button>
+            </div>
+            <div class="modal-body">
+                <p id="confirm-message"></p>
+                <div class="form-actions" style="margin-top: 20px;">
+                    <button class="btn btn-secondary">Abbrechen</button>
+                    <button class="btn btn-danger" id="confirm-ok-btn">Löschen</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/weather.js"></script>
+    <script src="js/weather_ui.js"></script>
+    <script src="js/advanced_filters.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>

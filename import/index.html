@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV Import - Jagdtagebuch</title>
+    <link rel="icon" href="../img/icon.svg" type="image/svg+xml">
+    <link rel="icon" href="../img/favicon-32.png" sizes="32x32" type="image/png">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c5530;
+            margin-bottom: 20px;
+        }
+        .info {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2196F3;
+        }
+        .warning {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 4px solid #ffc107;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #2c5530;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        .btn:hover {
+            background-color: #4a7c59;
+        }
+        .btn-danger {
+            background-color: #dc3545;
+        }
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .result.success {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+        }
+        .result.error {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+        }
+        .error-list {
+            margin-top: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            background: white;
+            padding: 10px;
+            border-radius: 3px;
+        }
+        .error-list ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1><span aria-hidden="true">🦌</span> CSV Import - Jagdtagebuch</h1>
+        
+        <div class="info" role="region" aria-label="Information">
+            <strong>Information:</strong> Diese Seite importiert die Datei <code>Jagdtagebuch.csv</code> in die Datenbank.
+            Stellen Sie sicher, dass die Datei im Hauptverzeichnis vorhanden ist.
+        </div>
+        
+        <div class="warning" role="alert" aria-label="Warnung">
+            <strong>Warnung:</strong> Der Import kann einige Minuten dauern. Bitte schließen Sie diese Seite nicht während des Imports.
+        </div>
+        
+        <div role="group" aria-label="Aktionen">
+            <button class="btn" onclick="startImport()" aria-label="CSV-Import starten">Import starten</button>
+            <a href="../index.html" class="btn" style="text-decoration: none;" aria-label="Zurück zur Hauptseite">Zurück zur Hauptseite</a>
+        </div>
+        
+        <div id="result" role="region" aria-live="polite" aria-label="Import-Ergebnis"></div>
+    </div>
+
+    <div class="container" style="margin-top: 24px;">
+        <h2 style="color: #2c5530; margin-top: 0;">Datenaustausch mit der Handy-App</h2>
+
+        <div class="info" role="region" aria-label="Information zum Datenaustausch">
+            <strong>Zum Handy:</strong> Sicherung herunterladen, die Datei aufs Handy bringen (z.&nbsp;B. per Mail oder Cloud)
+            und in der Handy-App unter <em>Daten → Sicherung importieren</em> einlesen.<br>
+            <strong>Vom Handy:</strong> In der Handy-App unter <em>Daten</em> eine Sicherung speichern und hier importieren.
+        </div>
+
+        <div class="warning" role="note" aria-label="Warnung zum Import">
+            <strong>Achtung:</strong> Der Import ersetzt <strong>alle</strong> Daten der Web-App durch die Daten aus der Datei.
+            Der bisherige Stand wird vorher auf dem Server unter <code>database/backups/</code> gespeichert.
+        </div>
+
+        <div role="group" aria-label="Datenaustausch">
+            <a href="../api/backup" class="btn" style="text-decoration: none;" download>Sicherung herunterladen</a>
+            <label class="btn btn-danger" style="display: inline-block;">
+                Sicherung importieren…
+                <input type="file" accept=".json,application/json" onchange="importBackup(this)" style="display: none;">
+            </label>
+        </div>
+
+        <div id="backup-result" role="region" aria-live="polite" aria-label="Ergebnis des Datenaustauschs"></div>
+    </div>
+
+    <script>
+        async function startImport() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<div class="result"><p>Import wird durchgeführt... Bitte warten.</p></div>';
+            
+            try {
+                const response = await fetch('import_csv.php?run=1');
+                const text = await response.text();
+                
+                // Parse result (it's plain text from CLI output)
+                if (text.includes('Import completed!')) {
+                    const importedMatch = text.match(/Imported: (\d+) hunts/);
+                    const skippedMatch = text.match(/Skipped: (\d+) rows/);
+                    
+                    let html = '<div class="result success">';
+                    html += '<h3><span aria-hidden="true">✓</span> Import erfolgreich!</h3>';
+                    html += `<p><strong>Importiert:</strong> ${importedMatch ? importedMatch[1] : '0'} Jagden</p>`;
+                    html += `<p><strong>Übersprungen:</strong> ${skippedMatch ? skippedMatch[1] : '0'} Zeilen</p>`;
+                    
+                    // Check for errors
+                    const errorMatch = text.match(/Errors:\n((?:  - .+\n?)+)/);
+                    if (errorMatch) {
+                        const errors = errorMatch[1].split('\n').filter(e => e.trim());
+                        if (errors.length > 0) {
+                            html += '<div class="error-list"><strong>Fehler:</strong><ul>';
+                            errors.forEach(error => {
+                                html += `<li>${escapeHtml(error.replace('  - ', ''))}</li>`;
+                            });
+                            html += '</ul></div>';
+                        }
+                    }
+                    
+                    html += '</div>';
+                    resultDiv.innerHTML = html;
+                } else {
+                    resultDiv.innerHTML = `<div class="result error"><h3><span aria-hidden="true">✗</span> Import fehlgeschlagen</h3><p>${escapeHtml(text)}</p></div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result error"><h3><span aria-hidden="true">✗</span> Fehler</h3><p>${escapeHtml(error.message)}</p></div>`;
+            }
+        }
+
+        async function importBackup(input) {
+            const file = input.files[0];
+            input.value = '';
+            if (!file) return;
+            const resultDiv = document.getElementById('backup-result');
+
+            let backup;
+            try {
+                backup = JSON.parse(await file.text());
+            } catch (e) {
+                resultDiv.innerHTML = '<div class="result error"><p>Die Datei ist keine gültige Sicherung (kein JSON).</p></div>';
+                return;
+            }
+            const huntCount = (backup.tables && backup.tables.hunts || []).length;
+            const from = backup.exported_at ? ` vom ${new Date(backup.exported_at).toLocaleString('de-DE')}` : '';
+            if (!confirm(`Die Sicherung${from} enthält ${huntCount} Jagden.\n\nAlle Daten der Web-App werden dadurch ersetzt. Fortfahren?`)) {
+                return;
+            }
+
+            resultDiv.innerHTML = '<div class="result"><p>Import läuft…</p></div>';
+            try {
+                const response = await fetch('../api/backup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(backup)
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+                const c = data.counts;
+                resultDiv.innerHTML = `<div class="result success"><h3><span aria-hidden="true">✓</span> Import fertig</h3>
+                    <p>${c.hunts} Jagden, ${c.hunting_areas} Reviere, ${c.seats} Sitze, ${c.animal_species} Tierarten.</p>
+                    <p>Der vorherige Stand liegt unter <code>${escapeHtml(data.previous_data)}</code>.</p></div>`;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result error"><h3><span aria-hidden="true">✗</span> Import fehlgeschlagen</h3><p>${escapeHtml(error.message)}</p></div>`;
+            }
+        }
+
+        function escapeHtml(value) {
+            return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+    </script>
+</body>
+</html>
+

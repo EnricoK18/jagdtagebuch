@@ -1,0 +1,14 @@
+# Offline app: static files only
+AddType application/wasm .wasm
+AddType application/manifest+json .webmanifest
+
+<IfModule mod_headers.c>
+    # The service worker decides about caching; always check sw.js and the pages for updates
+    <FilesMatch "^(sw\.js|.*\.html|manifest\.webmanifest)$">
+        Header set Cache-Control "no-cache"
+    </FilesMatch>
+</IfModule>
+
+<FilesMatch "\.(md|php)$">
+    Require all denied
+</FilesMatch>

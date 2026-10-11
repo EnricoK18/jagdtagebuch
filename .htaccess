@@ -1,0 +1,29 @@
+RewriteEngine On
+# Only needed if the API requests fail (e.g. with aliases or user directories), e.g.:
+# RewriteBase /jagdtagebuch/
+
+# Redirect all API requests to api/index.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^api/(.*)$ api/index.php [QSA,L]
+
+# Always revalidate pages, scripts and styles, so browsers don't keep running an old app.js
+# after an update (unchanged files are answered with a cheap 304 via ETag)
+<IfModule mod_headers.c>
+    <FilesMatch "\.(html|js|css)$">
+        Header set Cache-Control "no-cache"
+    </FilesMatch>
+</IfModule>
+
+# Block raw data, docs and debug/test files (config/ and database/ have their own .htaccess)
+<FilesMatch "\.(csv|xlsx|md|sql)$">
+    Require all denied
+</FilesMatch>
+<FilesMatch "^(test\.php|test_filter\.html)$">
+    Require all denied
+</FilesMatch>
+
+# Allow access to static files
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
+

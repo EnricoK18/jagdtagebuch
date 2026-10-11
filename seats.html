@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Sitze - Jagdtagebuch</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="icon" href="img/icon.svg" type="image/svg+xml">
+    <link rel="icon" href="img/favicon-32.png" sizes="32x32" type="image/png">
+    <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <a href="#main-content" class="skip-link">Zum Hauptinhalt springen</a>
+
+    <header class="app-header">
+        <div class="app-header-inner">
+            <a class="app-brand" href="index.html">Jagdtagebuch</a>
+            <nav class="main-nav" aria-label="Hauptnavigation">
+                <a class="nav-link" href="index.html#jagden"><span data-icon="list" data-size="22"></span>Jagden</a>
+                <a class="nav-link desktop-only" href="index.html#jagden-tabelle"><span data-icon="table" data-size="22"></span>Tabelle</a>
+                <a class="nav-link active" href="seats.html" aria-current="page"><span data-icon="map-pin" data-size="22"></span>Sitze</a>
+                <a class="nav-link" href="index.html#tierarten"><span data-icon="tag" data-size="22"></span>Tierarten</a>
+                <a class="nav-link" href="index.html#reviere"><span data-icon="map" data-size="22"></span>Reviere</a>
+                <a class="nav-link" href="index.html#auswertungen"><span data-icon="chart" data-size="22"></span>Auswertungen</a>
+            </nav>
+            <button class="btn btn-primary header-action" onclick="showSeatForm()" aria-label="Neuen Sitz anlegen">
+                <span data-icon="plus"></span><span class="label">Neuer Sitz</span>
+            </button>
+        </div>
+    </header>
+
+    <main id="main-content" class="page-content">
+        <div class="page-header">
+            <h1>Sitze</h1>
+        </div>
+
+        <div class="filters" role="group" aria-label="Filter">
+            <div class="filter-field">
+                <label for="filter-hunting-area">Revier</label>
+                <select id="filter-hunting-area" onchange="loadSeats()">
+                    <option value="">Alle Reviere</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="seats-list" class="seats-grid">
+            <div class="loading">
+                <div class="spinner"></div>Lade Sitze...
+            </div>
+        </div>
+    </main>
+
+    <!-- Sitz anlegen / bearbeiten -->
+    <div id="seat-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title">Neuen Sitz anlegen</h2>
+                <button class="btn-close" onclick="closeSeatModal()" aria-label="Dialog schließen"><span data-icon="x" data-size="20"></span></button>
+            </div>
+            <form id="seat-form" onsubmit="saveSeat(event)">
+                <input type="hidden" id="seat-id">
+
+                <div class="form-group">
+                    <label for="seat-name">Name</label>
+                    <input type="text" id="seat-name" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="seat-hunting-area">Revier</label>
+                        <select id="seat-hunting-area" required>
+                            <option value="">Bitte wählen...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="seat-type">Typ</label>
+                        <select id="seat-type">
+                            <option value="Kanzel">Kanzel</option>
+                            <option value="Drückjagdbock">Drückjagdbock</option>
+                            <option value="Ansitzleiter">Ansitzleiter</option>
+                            <option value="Sonstige">Sonstige</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="seat-latitude">Breitengrad</label>
+                        <input type="number" id="seat-latitude" step="0.000001" placeholder="z. B. 51.1657">
+                    </div>
+                    <div class="form-group">
+                        <label for="seat-longitude">Längengrad</label>
+                        <input type="number" id="seat-longitude" step="0.000001" placeholder="z. B. 10.4515">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="seat-view-direction">Blickrichtung</label>
+                    <select id="seat-view-direction">
+                        <option value="">Keine Angabe</option>
+                        <option value="N">Nord (N)</option>
+                        <option value="NO">Nordost (NO)</option>
+                        <option value="O">Ost (O)</option>
+                        <option value="SO">Südost (SO)</option>
+                        <option value="S">Süd (S)</option>
+                        <option value="SW">Südwest (SW)</option>
+                        <option value="W">West (W)</option>
+                        <option value="NW">Nordwest (NW)</option>
+                    </select>
+                </div>
+
+                <fieldset class="form-group" style="border: 0; padding: 0; margin: 0 0 16px;">
+                    <legend class="form-label" style="padding: 0; margin-bottom: 6px;">Schussrichtungen</legend>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox" name="shot-direction" value="N"> Nord</label>
+                        <label><input type="checkbox" name="shot-direction" value="NO"> Nordost</label>
+                        <label><input type="checkbox" name="shot-direction" value="O"> Ost</label>
+                        <label><input type="checkbox" name="shot-direction" value="SO"> Südost</label>
+                        <label><input type="checkbox" name="shot-direction" value="S"> Süd</label>
+                        <label><input type="checkbox" name="shot-direction" value="SW"> Südwest</label>
+                        <label><input type="checkbox" name="shot-direction" value="W"> West</label>
+                        <label><input type="checkbox" name="shot-direction" value="NW"> Nordwest</label>
+                    </div>
+                </fieldset>
+
+                <div class="form-group">
+                    <label for="seat-notes">Notizen</label>
+                    <textarea id="seat-notes" rows="3"></textarea>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeSeatModal()">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/map.js"></script>
+    <script src="js/seats.js"></script>
+</body>
+
+</html>

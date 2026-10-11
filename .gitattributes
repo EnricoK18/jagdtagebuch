@@ -1,0 +1,7 @@
+# Unix line endings in the repository (the release build runs on Linux)
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.woff2 binary
+*.wasm binary

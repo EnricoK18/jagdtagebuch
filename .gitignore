@@ -1,0 +1,18 @@
+# Local database access (template: config/config.example.php)
+config/config.php
+
+# Personal data
+*.csv
+*.xlsx
+database/backups/
+database/*backup*.sql
+
+# Build output (tools/build.php), published as GitHub release
+deploy/
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+~$*

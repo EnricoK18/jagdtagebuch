@@ -1,0 +1,32 @@
+# Builds both variants and publishes them as a GitHub release for every tag v* (e.g. v1.0.0)
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: zip
+
+      - name: Build
+        run: php tools/build.php "${GITHUB_REF_NAME}"
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            deploy/jagdtagebuch-mobile.zip
+            deploy/jagdtagebuch-web.zip
+          generate_release_notes: true

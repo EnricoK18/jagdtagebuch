@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Sitz - Jagdtagebuch</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="icon" href="img/icon.svg" type="image/svg+xml">
+    <link rel="icon" href="img/favicon-32.png" sizes="32x32" type="image/png">
+    <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <a href="#main-content" class="skip-link">Zum Hauptinhalt springen</a>
+
+    <header class="app-header">
+        <div class="app-header-inner">
+            <a class="app-brand" href="index.html">Jagdtagebuch</a>
+            <nav class="main-nav" aria-label="Hauptnavigation">
+                <a class="nav-link" href="index.html#jagden"><span data-icon="list" data-size="22"></span>Jagden</a>
+                <a class="nav-link desktop-only" href="index.html#jagden-tabelle"><span data-icon="table" data-size="22"></span>Tabelle</a>
+                <a class="nav-link active" href="seats.html" aria-current="page"><span data-icon="map-pin" data-size="22"></span>Sitze</a>
+                <a class="nav-link" href="index.html#tierarten"><span data-icon="tag" data-size="22"></span>Tierarten</a>
+                <a class="nav-link" href="index.html#reviere"><span data-icon="map" data-size="22"></span>Reviere</a>
+                <a class="nav-link" href="index.html#auswertungen"><span data-icon="chart" data-size="22"></span>Auswertungen</a>
+            </nav>
+        </div>
+    </header>
+
+    <main id="main-content" class="page-content">
+        <div>
+            <a class="link-btn" href="seats.html"><span data-icon="arrow-left" data-size="16"></span>Alle Sitze</a>
+        </div>
+        <div class="page-header">
+            <h1 id="seat-name">Laden...</h1>
+            <div class="page-header-actions">
+                <button class="btn btn-secondary" onclick="editSeat()"><span data-icon="pencil"></span>Bearbeiten</button>
+                <button class="btn btn-ghost-danger" onclick="deleteSeat()"><span data-icon="trash"></span>Löschen</button>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Jagden von diesem Sitz</div>
+                <div class="stat-value" id="hunt-count">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Anblick</div>
+                <div class="stat-value" id="observed-count">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Erlegt</div>
+                <div class="stat-value" id="harvested-count">0</div>
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <section class="info-section">
+                <h3>Informationen</h3>
+                <dl class="info-list" id="seat-info">
+                    <dt>Revier</dt><dd id="hunting-area">-</dd>
+                    <dt>Typ</dt><dd id="seat-type">-</dd>
+                    <dt>Koordinaten</dt><dd id="coordinates">-</dd>
+                    <dt>Blickrichtung</dt><dd id="view-direction">-</dd>
+                </dl>
+                <div id="shot-directions-container" style="display: none;">
+                    <p class="form-label" style="margin-bottom: 6px;">Schussrichtungen</p>
+                    <div class="direction-badges" id="shot-directions"></div>
+                </div>
+                <p id="notes-container" style="display: none;"><span id="notes">-</span></p>
+            </section>
+
+            <section class="info-section">
+                <h3>Karte</h3>
+                <div id="seat-map"></div>
+            </section>
+        </div>
+
+        <section class="info-section">
+            <h3>Jagden von diesem Sitz</h3>
+            <div id="hunts-list">
+                <div class="loading"><div class="spinner"></div>Lade Jagden...</div>
+            </div>
+        </section>
+
+        <div class="grid-2">
+            <section class="info-section">
+                <h3>Anblick nach Tierart</h3>
+                <div id="observed-animals-list">
+                    <div class="loading"><div class="spinner"></div>Lade Daten...</div>
+                </div>
+            </section>
+            <section class="info-section">
+                <h3>Strecke nach Tierart</h3>
+                <div id="harvested-animals-list">
+                    <div class="loading"><div class="spinner"></div>Lade Daten...</div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/map.js"></script>
+    <script src="js/utils.js"></script>
+    <script>
+        let currentSeatId = null;
+        let currentSeat = null;
+        let map = null;
+
+        // Load seat details on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            currentSeatId = urlParams.get('id');
+
+            if (!currentSeatId) {
+                showError('Keine Sitz-ID angegeben');
+                window.location.href = 'seats.html';
+                return;
+            }
+
+            loadSeatDetails();
+        });
+
+        async function loadSeatDetails() {
+            try {
+                currentSeat = await API.getSeat(currentSeatId);
+
+                // Update page title
+                document.getElementById('seat-name').textContent = currentSeat.name;
+
+                // Update information
+                document.getElementById('hunting-area').textContent = currentSeat.hunting_area_name || 'Unbekannt';
+                document.getElementById('seat-type').textContent = currentSeat.type || '-';
+
+                if (currentSeat.latitude && currentSeat.longitude) {
+                    document.getElementById('coordinates').textContent =
+                        `${currentSeat.latitude}, ${currentSeat.longitude}`;
+                } else {
+                    document.getElementById('coordinates').textContent = 'Keine Koordinaten hinterlegt';
+                }
+
+                document.getElementById('view-direction').textContent = currentSeat.view_direction || '-';
+
+                // Shot directions
+                if (currentSeat.shot_directions && currentSeat.shot_directions.length > 0) {
+                    document.getElementById('shot-directions-container').style.display = 'block';
+                    const container = document.getElementById('shot-directions');
+                    container.innerHTML = currentSeat.shot_directions
+                        .map(dir => `<span class="direction-badge">${escapeHtml(dir)}</span>`)
+                        .join('');
+                }
+
+                // Notes
+                if (currentSeat.notes) {
+                    document.getElementById('notes-container').style.display = 'block';
+                    document.getElementById('notes').textContent = currentSeat.notes;
+                }
+
+                // Statistics
+                if (currentSeat.statistics) {
+                    document.getElementById('hunt-count').textContent = currentSeat.statistics.hunt_count || 0;
+                    document.getElementById('observed-count').textContent = currentSeat.statistics.total_observed || 0;
+                    document.getElementById('harvested-count').textContent = currentSeat.statistics.total_harvested || 0;
+                }
+
+                // Initialize map
+                if (currentSeat.latitude && currentSeat.longitude) {
+                    initializeSeatMap();
+                } else {
+                    document.getElementById('seat-map').innerHTML =
+                        '<div class="empty-state"><p>Keine Koordinaten für diesen Sitz hinterlegt</p></div>';
+                }
+
+                // Load hunts
+                displayHunts();
+
+                // Load animal summaries
+                displayObservedAnimals();
+                displayHarvestedAnimals();
+
+            } catch (error) {
+                console.error('Error loading seat details:', error);
+                showError('Fehler beim Laden der Sitz-Details: ' + error.message);
+            }
+        }
+
+        function initializeSeatMap() {
+            const center = [parseFloat(currentSeat.latitude), parseFloat(currentSeat.longitude)];
+            map = initMap('seat-map', center, 15);
+
+            // Add seat marker
+            addSeatMarker(map, currentSeat, { showPopup: false });
+
+            // Add view direction
+            if (currentSeat.view_direction) {
+                addViewDirection(map, currentSeat);
+            }
+
+            // Add shot directions
+            if (currentSeat.shot_directions && currentSeat.shot_directions.length > 0) {
+                addShotDirections(map, currentSeat);
+            }
+        }
+
+        function displayHunts() {
+            const container = document.getElementById('hunts-list');
+
+            if (!currentSeat.hunts || currentSeat.hunts.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>Noch keine Jagden von diesem Sitz</p></div>';
+                return;
+            }
+
+            container.innerHTML = `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Datum</th>
+                            <th>Uhrzeit</th>
+                            <th>Gesehen</th>
+                            <th>Erlegt</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${currentSeat.hunts.map(hunt => `
+                            <tr>
+                                <td><a href="index.html?edit_hunt=${hunt.id}" title="Jagd öffnen">${formatDate(hunt.date)}</a></td>
+                                <td>${hunt.time_from || '-'}</td>
+                                <td>${hunt.observed_count || 0}</td>
+                                <td>${hunt.harvested_count || 0}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function editSeat() {
+            window.location.href = `seats.html?edit=${currentSeatId}`;
+        }
+
+        async function deleteSeat() {
+            if (!confirm(`Möchten Sie den Sitz "${currentSeat.name}" wirklich löschen?`)) {
+                return;
+            }
+
+            try {
+                await API.deleteSeat(currentSeatId);
+                showSuccess('Sitz gelöscht');
+                window.location.href = 'seats.html';
+            } catch (error) {
+                console.error('Error deleting seat:', error);
+                showError('Fehler beim Löschen des Sitzes: ' + error.message);
+            }
+        }
+
+        function displayObservedAnimals() {
+            const container = document.getElementById('observed-animals-list');
+
+            if (!currentSeat.hunts || currentSeat.hunts.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>Noch keine Daten</p></div>';
+                return;
+            }
+
+            // Aggregate observed animals by species
+            const speciesMap = {};
+            currentSeat.hunts.forEach(hunt => {
+                if (hunt.observed_animals && hunt.observed_animals.length > 0) {
+                    hunt.observed_animals.forEach(animal => {
+                        const speciesName = animal.animal_species_name || 'Unbekannt';
+                        if (!speciesMap[speciesName]) {
+                            speciesMap[speciesName] = {
+                                name: speciesName,
+                                totalQuantity: 0,
+                                huntCount: 0
+                            };
+                        }
+                        speciesMap[speciesName].totalQuantity += parseInt(animal.quantity) || 0;
+                        speciesMap[speciesName].huntCount++;
+                    });
+                }
+            });
+
+            const species = Object.values(speciesMap);
+
+            if (species.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>Noch keine Tiere gesehen</p></div>';
+                return;
+            }
+
+            // Sort by total quantity descending
+            species.sort((a, b) => b.totalQuantity - a.totalQuantity);
+
+            container.innerHTML = `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Tierart</th>
+                            <th>Anzahl gesamt</th>
+                            <th>Jagden mit Anblick</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${species.map(s => `
+                            <tr>
+                                <td>${escapeHtml(s.name)}</td>
+                                <td><strong>${s.totalQuantity}</strong></td>
+                                <td>${s.huntCount}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function displayHarvestedAnimals() {
+            const container = document.getElementById('harvested-animals-list');
+
+            if (!currentSeat.hunts || currentSeat.hunts.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>Noch keine Daten</p></div>';
+                return;
+            }
+
+            // Aggregate harvested animals by species
+            const speciesMap = {};
+            currentSeat.hunts.forEach(hunt => {
+                if (hunt.harvested_animals && hunt.harvested_animals.length > 0) {
+                    hunt.harvested_animals.forEach(animal => {
+                        const speciesName = animal.animal_species_name || 'Unbekannt';
+                        if (!speciesMap[speciesName]) {
+                            speciesMap[speciesName] = {
+                                name: speciesName,
+                                totalQuantity: 0,
+                                totalWeight: 0,
+                                huntCount: 0
+                            };
+                        }
+                        speciesMap[speciesName].totalQuantity += parseInt(animal.quantity) || 0;
+                        speciesMap[speciesName].totalWeight += parseFloat(animal.weight) || 0;
+                        speciesMap[speciesName].huntCount++;
+                    });
+                }
+            });
+
+            const species = Object.values(speciesMap);
+
+            if (species.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>Noch keine Tiere erlegt</p></div>';
+                return;
+            }
+
+            // Sort by total quantity descending
+            species.sort((a, b) => b.totalQuantity - a.totalQuantity);
+
+            container.innerHTML = `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Tierart</th>
+                            <th>Anzahl gesamt</th>
+                            <th>Gewicht gesamt (kg)</th>
+                            <th>Jagden mit Erlegung</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${species.map(s => `
+                            <tr>
+                                <td>${escapeHtml(s.name)}</td>
+                                <td><strong>${s.totalQuantity}</strong></td>
+                                <td>${s.totalWeight > 0 ? s.totalWeight.toFixed(1) : '-'}</td>
+                                <td>${s.huntCount}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+    </script>
+</body>
+
+</html>
